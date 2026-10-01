@@ -216,3 +216,41 @@ void test('rejects a schema with an id, because $ref and components are not supp
     /\$ref and components are not supported/,
   );
 });
+
+type Node = { name: string; child?: Node[] | undefined };
+const Node: z.ZodType<Node> = z.object({
+  name: z.string(),
+  child: z.lazy(() => z.array(Node)).optional(),
+});
+
+void test('rejects a recursive request body, because its $ref would dangle', () => {
+  assert.throws(
+    () => documentFor('tree', { request: { body: Node }, path: '/x', method: 'post' }),
+    /\$ref and components are not supported/,
+  );
+});
+
+void test('rejects a recursive response schema, because its $ref would dangle', () => {
+  const tree = defineController({
+    tree: route({
+      method: 'get',
+      path: '/x',
+      request: {},
+      responses: { [HttpStatus.Ok]: Node },
+      handler: async () => ({ status: HttpStatus.Ok, body: { name: 'root' } }),
+    }),
+  });
+
+  assert.throws(
+    () => generateOpenApiDocument([tree], { title: 'Test', version: '1' }),
+    /\$ref and components are not supported/,
+  );
+});
+
+void test('a property named $ref is a normal property', () => {
+  const request = { body: z.object({ $ref: z.string() }) };
+  const document = documentFor('named', { request, path: '/x', method: 'post' });
+  const schema = document.paths['/x'].post?.requestBody?.content['application/json'].schema;
+
+  assert.deepEqual(schema?.properties, { $ref: { type: 'string' } });
+});

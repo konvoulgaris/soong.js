@@ -42,14 +42,27 @@ const parameterLocations = [
   ['headers', 'header'],
 ] as const;
 
+// A string `$ref` points into the schema's own root or `$defs`. Inlined in the document, it would dangle.
+function hasReference(node: unknown): boolean {
+  if (typeof node !== 'object' || node === null) {
+    return false;
+  }
+
+  return Array.isArray(node)
+    ? node.some((item) => hasReference(item))
+    : Object.entries(node).some(
+        ([key, value]) => (key === '$ref' && typeof value === 'string') || hasReference(value),
+      );
+}
+
 // `input` is what a client sends. `output` is what it receives. A type that JSON Schema cannot show becomes an empty schema.
 // A defaulted field is optional on input and always present on output.
 function toJsonSchema(schema: z.ZodType, io: 'input' | 'output'): JsonSchema {
   const json = z.toJSONSchema(schema, { io, unrepresentable: 'any' });
 
-  if (json.$defs !== undefined) {
+  if (json.$defs !== undefined || hasReference(json)) {
     throw new Error(
-      'A schema uses .meta({ id }) or is recursive. $ref and components are not supported yet. Inline the schema (remove the id) instead.',
+      'A schema uses .meta({ id }) or is recursive. $ref and components are not supported yet. Remove the id, or replace a recursive schema with a non-recursive one.',
     );
   }
 
