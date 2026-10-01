@@ -6,11 +6,13 @@ Much like [soong](https://github.com/konvoulgaris/soong), the name is a nod to N
 
 ## Packages
 
-| Package                         | Contents                                        |
-| ------------------------------- | ----------------------------------------------- |
-| `@konvoulgaris/soong-constants` | The `Environment` object.                       |
-| `@konvoulgaris/soong-utils`     | The `logger`, a narrowed pino instance.         |
-| `@konvoulgaris/soong-style`     | The ESLint flat config and the Prettier config. |
+| Package                                           | Contents                                               |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| `@konvoulgaris/soong-constants`                   | The `Environment` and `HttpStatus` objects.            |
+| `@konvoulgaris/soong-utils`                       | The `logger`, a narrowed pino instance.                |
+| `@konvoulgaris/soong-style`                       | The ESLint flat config and the Prettier config.        |
+| `@konvoulgaris/soong-controllers`                 | Zod-first route declarations, validation, and OpenAPI. |
+| `@konvoulgaris/soong-controllers-fastify-adapter` | Registers the controllers on a Fastify app.            |
 
 ## Install
 
@@ -29,6 +31,7 @@ The packages are on GitHub Packages. GitHub does not allow anonymous installs, s
 
    ```sh
    pnpm add @konvoulgaris/soong-constants @konvoulgaris/soong-utils
+   pnpm add @konvoulgaris/soong-controllers @konvoulgaris/soong-controllers-fastify-adapter fastify zod
    pnpm add -D @konvoulgaris/soong-style eslint typescript jiti prettier
    ```
 
@@ -58,6 +61,10 @@ Add the Prettier config to `package.json`:
 ```
 
 For React projects, add `@konvoulgaris/soong-style/eslint-react` after the base config. For Tailwind projects, use `@konvoulgaris/soong-style/prettier-tailwind` in a `prettier.config.js` and install `prettier-plugin-tailwindcss`.
+
+### Use the controllers packages
+
+Declare each route once, with zod schemas, and register the controllers on a Fastify app. See the [controllers README](packages/controllers/README.md).
 
 ## Versioning Scheme
 
