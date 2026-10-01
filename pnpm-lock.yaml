@@ -205,13 +205,13 @@ importers:
       '@konvoulgaris/soong-constants':
         specifier: workspace:*
         version: link:../constants
-      '@konvoulgaris/soong-controllers':
-        specifier: workspace:*
-        version: link:../controllers
       '@konvoulgaris/soong-utils':
         specifier: workspace:*
         version: link:../utils
     devDependencies:
+      '@konvoulgaris/soong-controllers':
+        specifier: workspace:*
+        version: link:../controllers
       fastify:
         specifier: ^5.12.5
         version: 5.12.5

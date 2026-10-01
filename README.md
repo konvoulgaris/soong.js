@@ -64,7 +64,7 @@ For React projects, add `@konvoulgaris/soong-style/eslint-react` after the base 
 
 ### Use the controllers packages
 
-Declare each route once. The handler is a service-layer function. Its types come from the schemas of the route. `fastify` and `zod` are peer dependencies, so you install them yourself.
+Declare each route once. The handler is a service-layer function. Its types come from the schemas of the route. `fastify`, `zod`, and `@konvoulgaris/soong-controllers` are peer dependencies of the adapter, so you install them yourself. Keep the core and the adapter on the same minor version. A mismatch makes the install fail with a peer dependency error, so the app never runs two copies of the core.
 
 ```ts
 import { HttpStatus } from '@konvoulgaris/soong-constants';
