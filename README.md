@@ -1,5 +1,9 @@
 # soong.js
 
+An opinionated monorepo of JavaScript packages: my preferred way of doing things in JS projects, from logging to everything else.
+
+Much like [soong](https://github.com/konvoulgaris/soong), the name is a nod to Noonien Soong, the Star Trek: The Next Generation scientist who created the android Data.
+
 ## Versioning Scheme
 
 Zero versioning (0ver). The major version stays at 0 forever.
