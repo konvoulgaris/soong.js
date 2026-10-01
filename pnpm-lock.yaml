@@ -188,30 +188,28 @@ importers:
   packages/constants: {}
 
   packages/controllers:
-    dependencies:
+    devDependencies:
       '@konvoulgaris/soong-constants':
         specifier: workspace:*
         version: link:../constants
       '@konvoulgaris/soong-utils':
         specifier: workspace:*
         version: link:../utils
-    devDependencies:
       zod:
         specifier: ^4.6.5
         version: 4.6.5
 
   packages/controllers-fastify-adapter:
-    dependencies:
+    devDependencies:
       '@konvoulgaris/soong-constants':
         specifier: workspace:*
         version: link:../constants
-      '@konvoulgaris/soong-utils':
-        specifier: workspace:*
-        version: link:../utils
-    devDependencies:
       '@konvoulgaris/soong-controllers':
         specifier: workspace:*
         version: link:../controllers
+      '@konvoulgaris/soong-utils':
+        specifier: workspace:*
+        version: link:../utils
       fastify:
         specifier: ^5.12.5
         version: 5.12.5

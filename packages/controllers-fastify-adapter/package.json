@@ -28,17 +28,17 @@
     "test": "node --test 'test/**/*.test.ts'",
     "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**' --test 'test/**/*.test.ts'"
   },
-  "dependencies": {
-    "@konvoulgaris/soong-constants": "workspace:*",
-    "@konvoulgaris/soong-utils": "workspace:*"
-  },
   "peerDependencies": {
+    "@konvoulgaris/soong-constants": "workspace:^",
     "@konvoulgaris/soong-controllers": "workspace:^",
+    "@konvoulgaris/soong-utils": "workspace:^",
     "fastify": "^5.0.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@konvoulgaris/soong-constants": "workspace:*",
     "@konvoulgaris/soong-controllers": "workspace:*",
+    "@konvoulgaris/soong-utils": "workspace:*",
     "fastify": "^5.12.5",
     "zod": "^4.6.5"
   }
