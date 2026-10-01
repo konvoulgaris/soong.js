@@ -5,17 +5,36 @@ import { z } from 'zod';
 import type { Route } from './create-routes.ts';
 import { createRoutes } from './create-routes.ts';
 import { statusEntries } from './responses.ts';
-import type { Controller, HttpStatusCode, RequestSchemas } from './types.ts';
+import type { Controller, HttpMethod, HttpStatusCode, RequestSchemas } from './types.ts';
 
 export type OpenApiInfo = { title: string; version: string };
+
+type JsonSchema = z.core.JSONSchema.BaseSchema;
+
+export type OpenApiParameter = {
+  name: string;
+  in: 'path' | 'query' | 'header';
+  required: boolean;
+  schema: z.core.JSONSchema._JSONSchema;
+};
+
+export type OpenApiResponse = {
+  description: string;
+  content?: { 'application/json': { schema: JsonSchema } };
+};
+
+export type OpenApiOperation = {
+  operationId: string;
+  parameters?: OpenApiParameter[];
+  requestBody?: { required: true; content: { 'application/json': { schema: JsonSchema } } };
+  responses: Record<string, OpenApiResponse>;
+};
 
 export type OpenApiDocument = {
   openapi: '3.1.0';
   info: OpenApiInfo;
-  paths: Record<string, Record<string, unknown>>;
+  paths: Record<string, Partial<Record<HttpMethod, OpenApiOperation>>>;
 };
-
-type JsonSchema = Record<string, unknown>;
 
 const parameterLocations = [
   ['params', 'path'],
@@ -24,14 +43,23 @@ const parameterLocations = [
 ] as const;
 
 // `input` is what a client sends. `output` is what it receives. A type that JSON Schema cannot show becomes an empty schema.
+// A defaulted field is optional on input and always present on output.
 function toJsonSchema(schema: z.ZodType, io: 'input' | 'output'): JsonSchema {
-  const json: JsonSchema = z.toJSONSchema(schema, { io, unrepresentable: 'any' });
+  const json = z.toJSONSchema(schema, { io, unrepresentable: 'any' });
+
+  if (json.$defs !== undefined) {
+    throw new Error(
+      'A schema uses .meta({ id }) or is recursive. $ref and components are not supported yet. Inline the schema (remove the id) instead.',
+    );
+  }
+
+  // The schema is embedded in an OpenAPI document, which has its own dialect.
   delete json.$schema;
 
   return json;
 }
 
-function parameters(request: RequestSchemas): JsonSchema[] {
+function parameters(request: RequestSchemas): OpenApiParameter[] {
   return parameterLocations.flatMap(([target, location]) => {
     const schema = request[target];
 
@@ -40,28 +68,29 @@ function parameters(request: RequestSchemas): JsonSchema[] {
     }
 
     const json = toJsonSchema(schema, 'input');
-    const properties = (json.properties ?? {}) as Record<string, JsonSchema>;
-    const required = (json.required ?? []) as string[];
+    const properties = json.properties ?? {};
+    const required = json.required ?? [];
 
     return Object.entries(properties).map(([name, propertySchema]) => ({
       name,
       in: location,
+      // OpenAPI requires every path parameter to be required, whatever the schema says.
       required: location === 'path' || required.includes(name),
       schema: propertySchema,
     }));
   });
 }
 
-function response(status: HttpStatusCode, schema: z.ZodType): JsonSchema {
+function response(status: HttpStatusCode, schema: z.ZodType): OpenApiResponse {
   const description = schema.description ?? STATUS_CODES[status] ?? '';
 
-  // z.undefined() is the schema of a response with no body.
+  // Only z.undefined() means "no content". A z.void() or an optional undefined gets an empty schema under application/json.
   return schema instanceof z.ZodUndefined
     ? { description }
     : { description, content: { 'application/json': { schema: toJsonSchema(schema, 'output') } } };
 }
 
-function operation(route: Route): JsonSchema {
+function operation(route: Route): OpenApiOperation {
   const parameterList = parameters(route.request);
 
   return {

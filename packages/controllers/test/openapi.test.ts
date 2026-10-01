@@ -5,8 +5,10 @@ import { test } from 'node:test';
 import { HttpStatus } from '@konvoulgaris/soong-constants';
 import { z } from 'zod';
 
+import type { OpenApiDocument, OpenApiOperation } from '../src/openapi.ts';
 import { generateOpenApiDocument } from '../src/openapi.ts';
 import { defineController, route } from '../src/route.ts';
+import type { HttpMethod, RequestSchemas } from '../src/types.ts';
 
 const Forbidden = z.object({ key: z.literal('FORBIDDEN') }).describe('The caller may not do this.');
 const NotFound = z.object({ key: z.literal('NOT_FOUND') });
@@ -44,35 +46,18 @@ const controller = defineController({
   }),
 });
 
-type Schema = Record<string, unknown>;
-type ResponseObject = {
-  description: string;
-  content?: { 'application/json': { schema: Schema } };
-};
-type Operation = {
-  operationId: string;
-  parameters?: { name: string; in: string; required: boolean; schema: unknown }[];
-  requestBody?: { required?: boolean; content: { 'application/json': { schema: Schema } } };
-  responses: Record<string, ResponseObject | undefined>;
-};
-type Document = {
-  openapi: string;
-  info: unknown;
-  paths: Record<string, Record<string, Operation | undefined> | undefined>;
-};
-
-function build(): Document {
-  return generateOpenApiDocument([controller], { title: 'Test', version: '1.2.3' }) as Document;
+function build(): OpenApiDocument {
+  return generateOpenApiDocument([controller], { title: 'Test', version: '1.2.3' });
 }
 
-function operationOf(path: string, method: string): Operation {
-  const found = build().paths[path]?.[method];
+function operationOf(path: string, method: HttpMethod): OpenApiOperation {
+  const found = build().paths[path][method];
   assert.ok(found, `${method} ${path} is in the document`);
 
   return found;
 }
 
-function updateThing(): Operation {
+function updateThing(): OpenApiOperation {
   return operationOf('/things/{id}', 'put');
 }
 
@@ -106,7 +91,7 @@ void test('has no parameters key for a route with no request', () => {
 void test('uses the input schema for the body and the output schema for responses', () => {
   const operation = updateThing();
   const body = operation.requestBody?.content['application/json'].schema ?? {};
-  const ok = operation.responses['200']?.content?.['application/json'].schema;
+  const ok = operation.responses['200'].content?.['application/json'].schema;
 
   assert.equal(operation.requestBody?.required, true);
   assert.equal('required' in body, false, 'a defaulted body property is optional on input');
@@ -133,22 +118,22 @@ void test('lists the own, middleware, 400, and 500 responses', () => {
 void test('a no-content response has no content, and other responses do', () => {
   const { responses } = updateThing();
 
-  assert.equal('content' in (responses['204'] ?? {}), false);
-  assert.equal('content' in (responses['500'] ?? {}), false);
-  assert.ok(responses['404']?.content);
-  assert.ok(responses['400']?.content);
+  assert.equal('content' in responses['204'], false);
+  assert.equal('content' in responses['500'], false);
+  assert.ok(responses['404'].content);
+  assert.ok(responses['400'].content);
 });
 
 void test('uses the description of the schema, or the HTTP reason phrase', () => {
   const { responses } = updateThing();
 
-  assert.equal(responses['403']?.description, 'The caller may not do this.');
-  assert.equal(responses['404']?.description, 'Not Found');
-  assert.equal(responses['204']?.description, 'No Content');
+  assert.equal(responses['403'].description, 'The caller may not do this.');
+  assert.equal(responses['404'].description, 'Not Found');
+  assert.equal(responses['204'].description, 'No Content');
 });
 
 void test('a response schema with a transform becomes an empty property schema and does not throw', () => {
-  const schema = operationOf('/health', 'get').responses['200']?.content?.['application/json']
+  const schema = operationOf('/health', 'get').responses['200'].content?.['application/json']
     .schema;
 
   assert.deepEqual((schema?.properties as Record<string, unknown>).at, {});
@@ -158,5 +143,76 @@ void test('rejects a duplicate operationId', () => {
   assert.throws(
     () => generateOpenApiDocument([controller, controller], { title: 'Test', version: '1' }),
     /Duplicate operationId/,
+  );
+});
+
+type SingleRoute = { request: RequestSchemas; path: string; method?: HttpMethod };
+
+function documentFor(
+  name: string,
+  { request, path, method = 'get' }: SingleRoute,
+): OpenApiDocument {
+  const single = defineController({
+    [name]: route({
+      method,
+      path,
+      request,
+      responses: { [HttpStatus.Ok]: z.undefined() },
+      handler: async () => ({ status: HttpStatus.Ok, body: undefined }),
+    }),
+  });
+
+  return generateOpenApiDocument([single], { title: 'Test', version: '1' });
+}
+
+void test('a query parameter with a default is not required', () => {
+  const request = { query: z.object({ page: z.number().default(1) }) };
+  const document = documentFor('list', { request, path: '/x' });
+
+  assert.equal(document.paths['/x'].get?.parameters?.[0]?.required, false);
+});
+
+void test('a path parameter is required even when its schema key is optional', () => {
+  const request = { params: z.object({ id: z.string().optional() }) };
+  const document = documentFor('find', { request, path: '/x/{id}' });
+  const parameter = document.paths['/x/{id}'].get?.parameters?.[0];
+
+  assert.deepEqual([parameter?.name, parameter?.in, parameter?.required], ['id', 'path', true]);
+});
+
+void test('routes with different methods on one path share the path entry', () => {
+  const request = { params: IdParameters };
+  const things = defineController({
+    getThing: route({
+      method: 'get',
+      path: '/things/{id}',
+      request,
+      responses: { [HttpStatus.Ok]: z.undefined() },
+      handler: async () => ({ status: HttpStatus.Ok, body: undefined }),
+    }),
+    putThing: route({
+      method: 'put',
+      path: '/things/{id}',
+      request,
+      responses: { [HttpStatus.Ok]: z.undefined() },
+      handler: async () => ({ status: HttpStatus.Ok, body: undefined }),
+    }),
+  });
+  const both = generateOpenApiDocument([things], { title: 'Test', version: '1' });
+
+  assert.deepEqual(Object.keys(both.paths), ['/things/{id}']);
+  assert.deepEqual(
+    Object.keys(both.paths['/things/{id}']).toSorted((a, b) => a.localeCompare(b)),
+    ['get', 'put'],
+  );
+});
+
+void test('rejects a schema with an id, because $ref and components are not supported', () => {
+  const Shared = z.object({ name: z.string() }).meta({ id: 'Shared' });
+  const request = { body: z.object({ first: Shared, second: Shared }) };
+
+  assert.throws(
+    () => documentFor('shared', { request, path: '/x', method: 'post' }),
+    /\$ref and components are not supported/,
   );
 });
