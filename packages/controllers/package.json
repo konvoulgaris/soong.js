@@ -1,0 +1,38 @@
+{
+  "name": "@konvoulgaris/soong-controllers",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konvoulgaris/soong.js.git",
+    "directory": "packages/controllers"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc",
+    "test": "node --test 'test/**/*.test.ts'",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**' --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@konvoulgaris/soong-constants": "workspace:*",
+    "@konvoulgaris/soong-utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "zod": "^4.6.5"
+  }
+}
