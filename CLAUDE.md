@@ -8,6 +8,3 @@ Zero versioning (0ver). The major version stays at 0 forever.
 - Never run `pnpm version major`.
 - Commit all changes first. `pnpm version` fails on a dirty working tree.
 - `pnpm version` bumps `package.json`, commits, and tags `vX.Y.Z`.
-
-## License
-Licensed under the [MIT License](LICENSE) by [Konstantinos Voulgaris](https://github.com/konvoulgaris).
