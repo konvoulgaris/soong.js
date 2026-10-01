@@ -70,7 +70,14 @@ export function registerControllers(
             body: request.body,
           });
 
-          return await reply.status(response.status).send(response.body);
+          reply.status(response.status);
+
+          // Fastify sends a string as text/plain. The OpenAPI document says JSON.
+          return typeof response.body === 'string'
+            ? await reply
+                .type('application/json; charset=utf-8')
+                .send(JSON.stringify(response.body))
+            : await reply.send(response.body);
         },
       });
     }

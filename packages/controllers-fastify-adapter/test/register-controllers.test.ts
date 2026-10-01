@@ -27,6 +27,7 @@ const Customer = z.object({
   name: z.string(),
 });
 const NoContent = z.undefined();
+const GreetingText = z.string();
 
 function noop(): undefined {
   return;
@@ -75,6 +76,15 @@ const customers = defineController({
   }),
 });
 
+const greetings = defineController({
+  getGreeting: route({
+    method: 'get',
+    path: '/greeting',
+    responses: { [HttpStatus.Ok]: GreetingText },
+    handler: async () => ({ status: HttpStatus.Ok, body: 'hello' }),
+  }),
+});
+
 function build(
   t: TestContext,
   options?: Parameters<typeof registerControllers>[2],
@@ -113,6 +123,19 @@ void test('a no-content response is sent empty', async (t) => {
 
   assert.equal(response.statusCode, 204);
   assert.equal(response.body, '');
+});
+
+void test('a string body is sent as a JSON string', async (t) => {
+  t.mock.method(logger, 'warn', noop);
+  const app = Fastify();
+  registerControllers(app, [greetings]);
+  t.after(() => app.close());
+
+  const response = await app.inject({ method: 'GET', url: '/greeting' });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(String(response.headers['content-type']), /^application\/json/);
+  assert.equal(JSON.parse(response.body), 'hello');
 });
 
 void test('a declared error response is sent with its status and body', async (t) => {
