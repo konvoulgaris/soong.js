@@ -99,6 +99,8 @@ function checkPathParameters(operationId: string, definition: AnyRoute): void {
 // The one boundary between the core and an adapter. It checks the definitions and returns a flat list.
 export function createRoutes(controllers: readonly Controller[]): Route[] {
   const operationIds = new Set<string>();
+  // The operationId of the first route for each method and path, with placeholders normalised.
+  const endpoints = new Map<string, string>();
 
   return controllers.flatMap((controller) =>
     Object.entries(controller).map(([operationId, definition]) => {
@@ -108,6 +110,17 @@ export function createRoutes(controllers: readonly Controller[]): Route[] {
 
       operationIds.add(operationId);
       checkPathParameters(operationId, definition);
+
+      const endpoint = `${definition.method.toUpperCase()} ${definition.path.replaceAll(/\{[^}]+\}/g, '{}')}`;
+      const first = endpoints.get(endpoint);
+
+      if (first !== undefined) {
+        throw new Error(
+          `Routes ${first} and ${operationId} both handle ${definition.method.toUpperCase()} ${definition.path}`,
+        );
+      }
+
+      endpoints.set(endpoint, operationId);
       const declared = declareResponses(operationId, definition);
 
       return {

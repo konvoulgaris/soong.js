@@ -12,6 +12,7 @@ import { ValidationErrorResponse } from '../src/validation-error.ts';
 const Ok = z.object({ ok: z.boolean() });
 const Forbidden = z.object({ key: z.literal('FORBIDDEN') });
 const IdParameters = z.object({ id: z.string() });
+const NameParameters = z.object({ name: z.string() });
 const NameBody = z.object({ name: z.string() });
 
 async function ok(): Promise<{ status: 200; body: { ok: boolean } }> {
@@ -93,6 +94,53 @@ void test('throws on a duplicate operationId across controllers', () => {
   });
 
   assert.throws(() => createRoutes([a, b]), /Duplicate operationId same/);
+});
+
+void test('throws when two controllers handle the same method and path', () => {
+  const a = defineController({
+    first: route({ method: 'get', path: '/a', responses: { [HttpStatus.Ok]: Ok }, handler: ok }),
+  });
+  const b = defineController({
+    second: route({ method: 'get', path: '/a', responses: { [HttpStatus.Ok]: Ok }, handler: ok }),
+  });
+
+  assert.throws(() => createRoutes([a, b]), /Routes first and second both handle GET \/a/);
+});
+
+void test('throws when paths differ only by the name of a placeholder', () => {
+  const a = defineController({
+    first: route({
+      method: 'get',
+      path: '/a/{id}',
+      request: { params: IdParameters },
+      responses: { [HttpStatus.Ok]: Ok },
+      handler: ok,
+    }),
+  });
+  const b = defineController({
+    second: route({
+      method: 'get',
+      path: '/a/{name}',
+      request: { params: NameParameters },
+      responses: { [HttpStatus.Ok]: Ok },
+      handler: ok,
+    }),
+  });
+
+  assert.throws(
+    () => createRoutes([a, b]),
+    /Routes first and second both handle GET \/a\/\{name\}/,
+  );
+});
+
+void test('allows the same path with different methods, and the same method with different paths', () => {
+  const controller = defineController({
+    read: route({ method: 'get', path: '/a', responses: { [HttpStatus.Ok]: Ok }, handler: ok }),
+    write: route({ method: 'post', path: '/a', responses: { [HttpStatus.Ok]: Ok }, handler: ok }),
+    other: route({ method: 'get', path: '/b', responses: { [HttpStatus.Ok]: Ok }, handler: ok }),
+  });
+
+  assert.doesNotThrow(() => createRoutes([controller]));
 });
 
 void test('throws when the path placeholders are not the keys of the params schema', () => {
