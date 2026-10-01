@@ -65,8 +65,10 @@ void test('pnpm typecheck checks that the types reject wrong handlers', () => {
         path: '/c',
         responses: { [HttpStatus.Ok]: Ok },
         handler: async (request) => {
+          // This line never runs. It exists for the type check.
           // @ts-expect-error the route declares no request, so there is no body
-          assert.ok(request.body === undefined);
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- only the type check reads this expression
+          request.body;
 
           return { status: HttpStatus.Ok, body: { ok: true } };
         },
