@@ -97,6 +97,35 @@ void test('runs the middlewares in order and stops at the first response', async
   assert.deepEqual(response, { status: 403, body: { key: 'FORBIDDEN' } });
 });
 
+void test('passes the raw request, unchanged, to a middleware', async (t) => {
+  stubLogger(t);
+  const seen: RawRequest[] = [];
+  const handle = handleFor(
+    route({
+      method: 'get',
+      path: '/x',
+      responses: { [HttpStatus.Ok]: Ok },
+      pre: [
+        {
+          responses: {},
+          run: async (request): Promise<undefined> => {
+            seen.push(request);
+
+            return undefined;
+          },
+        },
+      ],
+      handler: async () => ({ status: HttpStatus.Ok, body: { id: '1' } }),
+    }),
+  );
+  const request = raw({ path: '/x', headers: { 'x-tenant': 'acme' } });
+
+  await handle(request);
+
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0], request);
+});
+
 void test('collects the issues of all targets into one 400 and logs them', async (t) => {
   const { warn } = stubLogger(t);
   let isCalled = false;

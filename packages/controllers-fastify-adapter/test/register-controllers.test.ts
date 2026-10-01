@@ -4,7 +4,10 @@ import type { TestContext } from 'node:test';
 import { test } from 'node:test';
 
 import { HttpStatus } from '@konvoulgaris/soong-constants';
-import type { PreOperationMiddleware } from '@konvoulgaris/soong-controllers';
+import type {
+  AnyPreOperationMiddleware,
+  PreOperationMiddleware,
+} from '@konvoulgaris/soong-controllers';
 import { defineController, route } from '@konvoulgaris/soong-controllers';
 import { logger } from '@konvoulgaris/soong-utils';
 import type { FastifyError, FastifyInstance } from 'fastify';
@@ -42,6 +45,18 @@ const requireAllow: PreOperationMiddleware<{ 403: typeof Forbidden }> = {
       : undefined,
 };
 
+// The paths that the recording middleware saw.
+const seenPaths: string[] = [];
+
+const recordPath: AnyPreOperationMiddleware = {
+  responses: {},
+  run: async (request): Promise<undefined> => {
+    seenPaths.push(request.path);
+
+    return undefined;
+  },
+};
+
 const customers = defineController({
   updateCustomer: route({
     method: 'post',
@@ -53,6 +68,7 @@ const customers = defineController({
       body: NameBody,
     },
     responses: { [HttpStatus.Ok]: Customer },
+    pre: [recordPath],
     handler: async (request) => ({
       status: HttpStatus.Ok,
       body: {
@@ -110,6 +126,20 @@ void test('a request reaches the handler parsed, and the response is sent', asyn
 
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json(), { id: '7', limit: 3, tenant: 'acme', name: 'Ada' });
+});
+
+void test('a middleware sees the path without the query string', async (t) => {
+  const app = build(t);
+  seenPaths.length = 0;
+
+  await app.inject({
+    method: 'POST',
+    url: '/customers/7?limit=3',
+    headers: { 'x-tenant': 'acme' },
+    payload: { name: 'Ada' },
+  });
+
+  assert.deepEqual(seenPaths, ['/customers/7']);
 });
 
 void test('a no-content response is sent empty', async (t) => {
@@ -221,6 +251,27 @@ void test('other errors, such as a 415, reach the error handler of the app', asy
 
   assert.equal(response.statusCode, 415);
   assert.deepEqual(response.json(), { fromApp: 'FST_ERR_CTP_INVALID_MEDIA_TYPE' });
+});
+
+void test('a body over the limit reaches the error handler of the app as a 413', async (t) => {
+  t.mock.method(logger, 'warn', noop);
+  const app = Fastify({ bodyLimit: 10 });
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- the request argument is unused
+  app.setErrorHandler((error: FastifyError, _request, reply) =>
+    reply.status(error.statusCode ?? 500).send({ fromApp: error.code }),
+  );
+  registerControllers(app, [customers]);
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/customers/7',
+    headers: { 'x-tenant': 'acme' },
+    payload: { name: 'a name that is longer than ten bytes' },
+  });
+
+  assert.equal(response.statusCode, 413);
+  assert.deepEqual(response.json(), { fromApp: 'FST_ERR_CTP_BODY_TOO_LARGE' });
 });
 
 void test('the error handler of the plugin does not apply to the routes of the app', async (t) => {
