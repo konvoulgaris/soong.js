@@ -14,4 +14,5 @@ Zero versioning (0ver). The major version stays at 0 forever.
 - `pnpm version` bumps `package.json`, commits, and tags `vX.Y.Z`.
 
 ## License
+
 Licensed under the [MIT License](LICENSE) by [Konstantinos Voulgaris](https://github.com/konvoulgaris).
