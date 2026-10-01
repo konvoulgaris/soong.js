@@ -24,38 +24,57 @@ export type Route = {
   handle: (raw: RawRequest) => Promise<SoongControllerResponse<unknown>>;
 };
 
+// Who declared a status: the route, the middleware at an index, or the framework (the implicit 400 and 500).
+type StatusSource = 'route' | 'framework' | number;
+
+function describeSource(source: StatusSource): string {
+  if (source === 'route') {
+    return 'the route';
+  }
+
+  return source === 'framework' ? 'the framework' : `middleware ${String(source)}`;
+}
+
 // The own responses, the middleware responses, the 400 when there is a request, and the 500.
 // A status that is declared twice, or that is reserved, is a mistake.
 export function declareResponses(operationId: string, definition: AnyRoute): ResponseSchemas {
   const declared: ResponseSchemas = {};
+  const sources = new Map<HttpStatusCode, StatusSource>();
 
-  function add(status: HttpStatusCode, schema: z.ZodType): void {
-    if (declared[status] !== undefined) {
+  function add(status: HttpStatusCode, schema: z.ZodType, source: StatusSource): void {
+    const first = sources.get(status);
+
+    if (first !== undefined) {
+      const prefix = `Route ${operationId}: status ${String(status)}`;
+
       throw new Error(
-        `Route ${operationId} declares status ${String(status)} twice, or declares a reserved status`,
+        source === 'framework'
+          ? `${prefix} is reserved by the framework, remove it from the responses of ${describeSource(first)}`
+          : `${prefix} is declared by both ${describeSource(first)} and ${describeSource(source)}`,
       );
     }
 
+    sources.set(status, source);
     declared[status] = schema;
   }
 
   for (const [status, schema] of statusEntries(definition.responses)) {
-    add(status, schema);
+    add(status, schema, 'route');
   }
 
   const middlewares = definition.pre ?? [];
 
-  for (const middleware of middlewares) {
+  for (const [index, middleware] of middlewares.entries()) {
     for (const [status, schema] of statusEntries(middleware.responses)) {
-      add(status, schema);
+      add(status, schema, index);
     }
   }
 
   if (definition.request !== undefined) {
-    add(HttpStatus.BadRequest, ValidationErrorResponse);
+    add(HttpStatus.BadRequest, ValidationErrorResponse, 'framework');
   }
 
-  add(HttpStatus.InternalServerError, z.undefined());
+  add(HttpStatus.InternalServerError, z.undefined(), 'framework');
 
   return declared;
 }

@@ -167,6 +167,55 @@ void test('throws when a middleware and the route declare the same status', () =
   assert.throws(() => createRoutes([controller]), /status 403/);
 });
 
+void test('throws when two middlewares declare the same status', () => {
+  const controller = defineController({
+    a: route({
+      method: 'get',
+      path: '/a',
+      responses: { [HttpStatus.Ok]: Ok },
+      pre: [
+        { responses: { [HttpStatus.Forbidden]: Forbidden }, run: allow },
+        { responses: { [HttpStatus.Forbidden]: Forbidden }, run: allow },
+      ],
+      handler: ok,
+    }),
+  });
+
+  assert.throws(
+    () => createRoutes([controller]),
+    /status 403 is declared by both middleware 0 and middleware 1/,
+  );
+});
+
+void test('says why a reserved status and a shared status are rejected', () => {
+  const reserved = defineController({
+    a: route({
+      method: 'get',
+      path: '/a',
+      responses: { [HttpStatus.Ok]: Ok, [HttpStatus.InternalServerError]: Ok },
+      handler: ok,
+    }),
+  });
+  const shared = defineController({
+    b: route({
+      method: 'get',
+      path: '/b',
+      responses: { [HttpStatus.Ok]: Ok, [HttpStatus.Forbidden]: Forbidden },
+      pre: [{ responses: { [HttpStatus.Forbidden]: Forbidden }, run: allow }],
+      handler: ok,
+    }),
+  });
+
+  assert.throws(
+    () => createRoutes([reserved]),
+    /Route a: status 500 is reserved by the framework, remove it from the responses of the route/,
+  );
+  assert.throws(
+    () => createRoutes([shared]),
+    /Route b: status 403 is declared by both the route and middleware 0/,
+  );
+});
+
 void test('handle runs the pipeline of the route', async () => {
   const [health] = createRoutes([
     defineController({
