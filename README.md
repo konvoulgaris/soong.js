@@ -94,11 +94,13 @@ registerControllers(app, [customers], {
 });
 ```
 
-- A handler returns `{ status, body }`. TypeScript accepts only the statuses and bodies that the route declares. `z.undefined()` means no body.
-- A failed validation gives a 400 with the body `{ issues }`, and the log gets `REQUEST_VALIDATION_FAILED`.
-- A response that does not match its schema gives an empty 500, and the log gets `RESPONSE_VALIDATION_FAILED`.
+- A handler returns `{ status, body }`. TypeScript accepts only the statuses and bodies that the route declares. `z.undefined()` means no body. A `string` body is sent as a JSON string.
+- A failed validation gives a 400 with the body `{ issues }`, and the log gets `REQUEST_VALIDATION_FAILED`. The log carries `operationId` and `issues`.
+- A response that does not match its schema gives an empty 500, and the log gets `RESPONSE_VALIDATION_FAILED`. The log carries `operationId`, `status`, `issues`, and a `reason`: `undeclared_status` or `invalid_body`.
 - `pre` middlewares run before validation. They can answer with a declared response, for example a 403.
 - The adapter turns only a malformed or empty JSON body into the 400 `{ issues }`. Other Fastify errors (415, 413) and errors that a handler throws go to the error handler of your app.
+- Fastify parses the body before the `pre` middlewares run. A malformed JSON body or an unsupported content type gets its 400 or 415 before a middleware can answer 401 or 403. A body that is valid JSON but fails the schema does reach the middlewares first.
+- Two routes with the same method and path throw at registration. Placeholders that differ only by name, such as `/a/{id}` and `/a/{name}`, count as the same path.
 - `registerControllers` throws at once for these errors in the definitions: a duplicate `operationId`, path placeholders that do not match the params schema, and a reserved or duplicate response status. A clash between the OpenAPI path and a route path shows up when the app becomes ready (`await app.ready()` or `listen`).
 - Schemas that need `$ref` are not supported yet. These are a schema with `.meta({ id })` and a recursive schema. The OpenAPI generator throws for them.
 - Header names in a `headers` schema must be lower case, because Fastify lower-cases them. Query values arrive as strings, so use `z.coerce` for numbers and booleans.
