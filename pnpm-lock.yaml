@@ -166,7 +166,7 @@ importers:
 
   .:
     devDependencies:
-      '@soong/style':
+      '@konvoulgaris/soong-style':
         specifier: workspace:*
         version: link:packages/style
       '@types/node':
@@ -235,7 +235,7 @@ importers:
 
   packages/utils:
     dependencies:
-      '@soong/constants':
+      '@konvoulgaris/soong-constants':
         specifier: workspace:*
         version: link:../constants
       pino:

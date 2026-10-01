@@ -1,5 +1,5 @@
 {
-  "name": "@soong/utils",
+  "name": "@konvoulgaris/soong-utils",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -21,7 +21,7 @@
     "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/**' --test 'test/**/*.test.ts'"
   },
   "dependencies": {
-    "@soong/constants": "workspace:*",
+    "@konvoulgaris/soong-constants": "workspace:*",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3"
   }

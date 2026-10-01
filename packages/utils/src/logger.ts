@@ -1,4 +1,4 @@
-import { Environment } from '@soong/constants';
+import { Environment } from '@konvoulgaris/soong-constants';
 import { pino } from 'pino';
 
 type LogFields = { key: Uppercase<string> } & Record<string, unknown>;

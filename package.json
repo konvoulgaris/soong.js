@@ -17,14 +17,14 @@
     "version": "V=$npm_package_version pnpm -r exec sh -c 'pnpm pkg set version=$V' && git add packages"
   },
   "devDependencies": {
-    "@soong/style": "workspace:*",
+    "@konvoulgaris/soong-style": "workspace:*",
     "@types/node": "^24.13.6",
     "eslint": "^10.11.0",
     "jiti": "^2.7.0",
     "prettier": "^3.9.9",
     "typescript": "~6.0.3"
   },
-  "prettier": "@soong/style/prettier",
+  "prettier": "@konvoulgaris/soong-style/prettier",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",

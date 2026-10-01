@@ -36,7 +36,7 @@ jobs:
           node-version: 24
           cache: pnpm
           registry-url: https://npm.pkg.github.com
-          scope: '@soong'
+          scope: '@konvoulgaris'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm -r publish --no-git-checks

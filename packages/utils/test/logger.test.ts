@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 
-import { Environment } from '@soong/constants';
+import { Environment } from '@konvoulgaris/soong-constants';
 
 // The import anchors the type checks at the end of this file. Keep it a value import.
 import { logger } from '../src/logger.ts';
