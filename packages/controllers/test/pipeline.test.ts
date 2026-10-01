@@ -7,15 +7,10 @@ import { HttpStatus } from '@konvoulgaris/soong-constants';
 import { logger } from '@konvoulgaris/soong-utils';
 import { z } from 'zod';
 
+import { declareResponses } from '../src/create-routes.ts';
 import { createHandle } from '../src/pipeline.ts';
 import { route } from '../src/route.ts';
-import type {
-  AnyPreOperationMiddleware,
-  AnyRoute,
-  RawRequest,
-  ResponseSchemas,
-} from '../src/types.ts';
-import { ValidationErrorResponse } from '../src/validation-error.ts';
+import type { AnyPreOperationMiddleware, AnyRoute, RawRequest } from '../src/types.ts';
 
 function noop(): undefined {
   return;
@@ -43,26 +38,8 @@ function raw(overrides: Partial<RawRequest> = {}): RawRequest {
   };
 }
 
-// The declared set that createRoutes would build: the own responses, the middleware responses, and the implicit 400 and 500.
-function declaredFor(definition: AnyRoute): ResponseSchemas {
-  const middlewareResponses: ResponseSchemas = {};
-
-  const middlewares = definition.pre ?? [];
-
-  for (const middleware of middlewares) {
-    Object.assign(middlewareResponses, middleware.responses);
-  }
-
-  return {
-    ...definition.responses,
-    ...middlewareResponses,
-    ...(definition.request && { [HttpStatus.BadRequest]: ValidationErrorResponse }),
-    [HttpStatus.InternalServerError]: z.undefined(),
-  };
-}
-
 function handleFor(definition: AnyRoute): ReturnType<typeof createHandle> {
-  return createHandle('testOperation', definition, declaredFor(definition));
+  return createHandle('testOperation', definition, declareResponses('testOperation', definition));
 }
 
 const Ok = z.object({ id: z.string() });

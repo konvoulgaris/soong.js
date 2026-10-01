@@ -26,7 +26,7 @@ export type Route = {
 
 // The own responses, the middleware responses, the 400 when there is a request, and the 500.
 // A status that is declared twice, or that is reserved, is a mistake.
-function declareResponses(operationId: string, definition: AnyRoute): ResponseSchemas {
+export function declareResponses(operationId: string, definition: AnyRoute): ResponseSchemas {
   const declared: ResponseSchemas = {};
 
   function add(status: HttpStatusCode, schema: z.ZodType): void {
