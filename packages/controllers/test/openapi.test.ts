@@ -19,6 +19,7 @@ const TenantHeaders = z.object({ 'x-tenant': z.string() });
 const defaultedName = z.string().default('thing');
 const ThingBody = z.object({ name: defaultedName });
 const ToDate = z.string().transform((value) => new Date(value));
+const OptionalThingBody = ThingBody.optional();
 const HealthBody = z.object({ at: ToDate });
 
 function allow(): Promise<undefined> {
@@ -100,6 +101,22 @@ void test('uses the input schema for the body and the output schema for response
     ['name'],
     'a defaulted response property is always present on output',
   );
+});
+
+void test('marks an optional request body as not required', () => {
+  const optional = defineController({
+    patchThing: route({
+      method: 'patch',
+      path: '/things',
+      request: { body: OptionalThingBody },
+      responses: { [HttpStatus.NoContent]: z.undefined() },
+      handler: async () => ({ status: HttpStatus.NoContent, body: undefined }),
+    }),
+  });
+
+  const document = generateOpenApiDocument([optional], { title: 'Test', version: '1.0.0' });
+
+  assert.equal(document.paths['/things'].patch?.requestBody?.required, false);
 });
 
 void test('removes $schema from every inlined schema', () => {

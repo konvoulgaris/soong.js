@@ -26,7 +26,7 @@ export type OpenApiResponse = {
 export type OpenApiOperation = {
   operationId: string;
   parameters?: OpenApiParameter[];
-  requestBody?: { required: true; content: { 'application/json': { schema: JsonSchema } } };
+  requestBody?: { required: boolean; content: { 'application/json': { schema: JsonSchema } } };
   responses: Record<string, OpenApiResponse>;
 };
 
@@ -111,7 +111,7 @@ function operation(route: Route): OpenApiOperation {
     ...(parameterList.length > 0 && { parameters: parameterList }),
     ...(route.request.body !== undefined && {
       requestBody: {
-        required: true,
+        required: !route.request.body.safeParse(undefined).success,
         content: { 'application/json': { schema: toJsonSchema(route.request.body, 'input') } },
       },
     }),
