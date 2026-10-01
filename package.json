@@ -14,7 +14,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "version": "V=$npm_package_version pnpm -r exec sh -c 'pnpm pkg set version=$V' && git add packages"
+    "version": "V=$npm_package_version pnpm -r exec sh -c 'pnpm pkg set version=$V' && git add packages",
+    "release:patch": "pnpm version patch && git push --follow-tags",
+    "release:minor": "pnpm version minor && git push --follow-tags"
   },
   "devDependencies": {
     "@konvoulgaris/soong-style": "workspace:*",

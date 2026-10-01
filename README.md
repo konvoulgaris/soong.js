@@ -63,11 +63,11 @@ For React projects, add `@konvoulgaris/soong-style/eslint-react` after the base 
 
 Zero versioning (0ver). The major version stays at 0 forever.
 
-- Release with `pnpm version patch` or `pnpm version minor`.
+- Release with `pnpm release:patch` or `pnpm release:minor`. They run `pnpm version` and push the commit and the tag.
 - Never run `pnpm version major`.
 - Commit all changes first. `pnpm version` fails on a dirty working tree.
 - `pnpm version` bumps the root and package versions, commits, and tags `vX.Y.Z`.
-- Push the commit and the tag with `git push --follow-tags`. CI checks the code and publishes the packages.
+- CI checks the code and publishes the packages when the tag arrives.
 
 ## License
 
