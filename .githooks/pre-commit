@@ -1,0 +1,6 @@
+#!/bin/sh
+# Superpowers specs and plans are local working notes. Stop a commit that adds or changes them.
+if git diff --cached --name-only --diff-filter=ACMRT -- docs/superpowers | grep -q .; then
+  echo "do not commit files in docs/superpowers/. Unstage them with: git restore --staged docs/superpowers"
+  exit 1
+fi
