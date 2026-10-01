@@ -200,6 +200,30 @@ void test('other errors, such as a 415, reach the error handler of the app', asy
   assert.deepEqual(response.json(), { fromApp: 'FST_ERR_CTP_INVALID_MEDIA_TYPE' });
 });
 
+void test('the error handler of the plugin does not apply to the routes of the app', async (t) => {
+  t.mock.method(logger, 'warn', noop);
+  t.mock.method(logger, 'error', noop);
+  const app = Fastify();
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- the request argument is unused
+  app.setErrorHandler((error: FastifyError, _request, reply) =>
+    reply.status(error.statusCode ?? 500).send({ fromApp: error.code }),
+  );
+  registerControllers(app, [customers]);
+  // After the registration, so a handler set on the root instance would apply to this route.
+  app.post('/own', async () => ({ ok: true }));
+  t.after(() => app.close());
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/own',
+    headers: { 'content-type': 'application/json' },
+    payload: '{bad',
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.json(), { fromApp: 'FST_ERR_CTP_INVALID_JSON_BODY' });
+});
+
 void test('serves the OpenAPI document when openapi is set', async (t) => {
   const app = build(t, {
     openapi: { path: '/openapi.json', title: 'Customers', version: '1.0.0' },
