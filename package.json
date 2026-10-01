@@ -13,7 +13,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
+    "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
+    "version": "V=$npm_package_version pnpm -r exec sh -c 'pnpm pkg set version=$V' && git add packages"
   },
   "devDependencies": {
     "@soong/style": "workspace:*",
