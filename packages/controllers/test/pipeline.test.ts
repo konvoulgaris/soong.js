@@ -149,8 +149,13 @@ void test('collects the issues of all targets into one 400 and logs them', async
   );
   assert.deepEqual(paths, [['id'], ['name']]);
   assert.equal(warn.mock.callCount(), 1);
-  const logged = warn.mock.calls[0]?.arguments[0] as { key: string; issues: unknown[] };
+  const logged = warn.mock.calls[0]?.arguments[0] as {
+    key: string;
+    operationId: string;
+    issues: unknown[];
+  };
   assert.equal(logged.key, 'REQUEST_VALIDATION_FAILED');
+  assert.equal(logged.operationId, 'testOperation');
   assert.equal(logged.issues.length, 2);
 });
 
@@ -213,8 +218,17 @@ void test('returns an empty 500 and logs when the body does not match its schema
 
   assert.deepEqual(response, { status: 500, body: undefined });
   assert.equal(error.mock.callCount(), 1);
-  const logged = error.mock.calls[0]?.arguments[0] as { key: string; issues: unknown[] };
+  const logged = error.mock.calls[0]?.arguments[0] as {
+    key: string;
+    reason: string;
+    operationId: string;
+    status: number;
+    issues: unknown[];
+  };
   assert.equal(logged.key, 'RESPONSE_VALIDATION_FAILED');
+  assert.equal(logged.reason, 'invalid_body');
+  assert.equal(logged.operationId, 'testOperation');
+  assert.equal(logged.status, 200);
   assert.equal(logged.issues.length, 1);
 });
 
@@ -232,10 +246,16 @@ void test('returns an empty 500 and logs when the handler returns an undeclared 
   const response = await handle(raw());
 
   assert.deepEqual(response, { status: 500, body: undefined });
-  assert.equal(
-    (error.mock.calls[0]?.arguments[0] as { key: string }).key,
-    'RESPONSE_VALIDATION_FAILED',
-  );
+  const logged = error.mock.calls[0]?.arguments[0] as {
+    key: string;
+    reason: string;
+    operationId: string;
+    issues: unknown[];
+  };
+  assert.equal(logged.key, 'RESPONSE_VALIDATION_FAILED');
+  assert.equal(logged.reason, 'undeclared_status');
+  assert.equal(logged.operationId, 'testOperation');
+  assert.deepEqual(logged.issues, []);
 });
 
 void test('returns a no-content response as it is', async (t) => {
@@ -276,6 +296,10 @@ void test('returns an empty 500 when a middleware answers with an undeclared sta
 
   assert.deepEqual(response, { status: 500, body: undefined });
   assert.equal(error.mock.callCount(), 1);
+  assert.equal(
+    (error.mock.calls[0]?.arguments[0] as { key: string }).key,
+    'RESPONSE_VALIDATION_FAILED',
+  );
 });
 
 void test('returns an empty 500 when a middleware response does not match its schema', async (t) => {
@@ -302,6 +326,10 @@ void test('returns an empty 500 when a middleware response does not match its sc
 
   assert.deepEqual(response, { status: 500, body: undefined });
   assert.equal(error.mock.callCount(), 1);
+  assert.equal(
+    (error.mock.calls[0]?.arguments[0] as { key: string }).key,
+    'RESPONSE_VALIDATION_FAILED',
+  );
 });
 
 void test('the handler may not return a status that only a middleware declares', async (t) => {
@@ -325,6 +353,45 @@ void test('the handler may not return a status that only a middleware declares',
 
   assert.deepEqual(response, { status: 500, body: undefined });
   assert.equal(error.mock.callCount(), 1);
+});
+
+void test('does not catch an exception of the handler', async (t) => {
+  const { error } = stubLogger(t);
+  const handle = handleFor(
+    route({
+      method: 'get',
+      path: '/x',
+      responses: { [HttpStatus.Ok]: Ok },
+      handler: async () => {
+        throw new Error('boom');
+      },
+    }),
+  );
+
+  await assert.rejects(handle(raw()), /boom/);
+  assert.equal(error.mock.callCount(), 0);
+});
+
+void test('does not catch an exception of a middleware', async (t) => {
+  stubLogger(t);
+  const handle = handleFor(
+    route({
+      method: 'get',
+      path: '/x',
+      responses: { [HttpStatus.Ok]: Ok },
+      pre: [
+        {
+          responses: {},
+          run: async (): Promise<undefined> => {
+            throw new Error('middleware boom');
+          },
+        },
+      ],
+      handler: async () => ({ status: HttpStatus.Ok, body: { id: '1' } }),
+    }),
+  );
+
+  await assert.rejects(handle(raw()), /middleware boom/);
 });
 
 void test('validates the headers target, and the 400 body has no key', async (t) => {
