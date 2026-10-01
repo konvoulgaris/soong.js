@@ -1,6 +1,11 @@
 {
   "name": "@konvoulgaris/soong-style",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konvoulgaris/soong.js.git",
+    "directory": "packages/style"
+  },
   "type": "module",
   "exports": {
     "./eslint": {

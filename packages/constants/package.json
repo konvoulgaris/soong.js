@@ -1,6 +1,11 @@
 {
   "name": "@konvoulgaris/soong-constants",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konvoulgaris/soong.js.git",
+    "directory": "packages/constants"
+  },
   "type": "module",
   "exports": {
     ".": {
